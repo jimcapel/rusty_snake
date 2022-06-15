@@ -1,4 +1,6 @@
 use ggez::graphics;
+use ggez::mint::*;
+use ggez::{Context, GameResult};
 
 pub struct Score {
     pub text: graphics::Text,
@@ -19,8 +21,8 @@ impl Score {
         Score { value, text }
     }
 
-    pub fn add_to_score(&mut self) {
-        self.value = self.value + 10;
+    pub fn change_score(&mut self, value: u32) {
+        self.value = value;
         self.text = graphics::Text::new(format!("Score: {}", self.value));
         self.text.set_font(
             graphics::Font::default(),
@@ -29,5 +31,18 @@ impl Score {
                 y: crate::FONT_SCALE_Y,
             },
         );
+    }
+
+    pub fn render(&self, ctx: &mut Context) -> GameResult {
+        graphics::draw(
+            ctx,
+            &self.text,
+            graphics::DrawParam::default().dest(Point2 {
+                x: crate::FONT_POSITION_X,
+                y: crate::FONT_POSITION_Y,
+            }),
+        )?;
+
+        Ok(())
     }
 }

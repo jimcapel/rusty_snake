@@ -1,7 +1,7 @@
 //  ggez
 use ggez::graphics::{self, Color, DrawMode};
 use ggez::mint::*;
-use ggez::Context;
+use ggez::{Context, GameResult};
 
 //  rand
 use rand::prelude::*;
@@ -12,7 +12,6 @@ pub struct Food {
 }
 
 impl Food {
-    //  to_do: stop food from spawning on snake, when no tiles free, reset game
     pub fn new(ctx: &mut Context) -> Self {
         let rect = graphics::Rect {
             x: 0.0,
@@ -20,7 +19,7 @@ impl Food {
             w: crate::GRID_CELL_SIZE_X,
             h: crate::GRID_CELL_SIZE_Y,
         };
-        // could reduce calls to this
+
         let mesh = graphics::Mesh::new_rectangle(ctx, DrawMode::fill(), rect, Color::RED)
             .expect("error creating food mesh");
 
@@ -43,7 +42,7 @@ impl Food {
         }
     }
 
-    pub fn food_eaten(current_player_positions: Vec<Point2<f32>>) -> Point2<f32> {
+    pub fn new_position(&mut self, snake: &crate::Player) {
         let (mut random_x, mut random_y) = Self::generate_random_position();
 
         let mut random_point = Point2 {
@@ -51,7 +50,7 @@ impl Food {
             y: random_y,
         };
 
-        while current_player_positions.contains(&random_point) {
+        while snake.body.contains(&random_point) {
             (random_x, random_y) = Self::generate_random_position();
 
             random_point = Point2 {
@@ -60,7 +59,7 @@ impl Food {
             };
         }
 
-        random_point
+        self.position = random_point;
     }
 
     fn generate_random_position() -> (f32, f32) {
@@ -70,5 +69,15 @@ impl Food {
         let random_y: f32 =
             rng.gen_range(0.0..crate::GRID_SIZE_Y).floor() * crate::GRID_CELL_SIZE_Y;
         (random_x, random_y)
+    }
+
+    pub fn render(&self, ctx: &mut Context) -> GameResult {
+        graphics::draw(
+            ctx,
+            &self.mesh,
+            graphics::DrawParam::default().dest(self.position),
+        )?;
+
+        Ok(())
     }
 }

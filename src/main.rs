@@ -1,7 +1,6 @@
 //  ggez
 use ggez::event::{self, EventHandler};
-use ggez::graphics::{self, Color, DrawParam};
-use ggez::mint::*;
+use ggez::graphics::{self, Color};
 use ggez::{conf, timer, Context, ContextBuilder, GameResult};
 
 //  declare modules
@@ -40,18 +39,20 @@ fn main() {
 }
 
 //   struct holding game state
-struct MainState {
-    player: Player,
+pub struct MainState {
     food: Food,
     score: Score,
+    player: Player,
 }
 
 impl MainState {
     //  create new game state
     fn new(ctx: &mut Context) -> MainState {
-        let player = Player::new(ctx);
+        // let player = Player::new(ctx);
         let food = Food::new(ctx);
         let score = Score::new();
+
+        let player = Player::new(ctx);
 
         MainState {
             player,
@@ -71,29 +72,22 @@ impl EventHandler for MainState {
     //  update code here
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         while timer::check_update_time(ctx, FPS) {
-            //  move player, false true if a collision has occurred
-            if !self.player.move_player(ctx) {
-                return Ok(self.new_game(ctx));
+            self.player.move_player(ctx);
+
+            if collision_check(&self.player) {
+                self.new_game(ctx);
             }
 
             //  check for head -> food collision, if so, eat food && grow tail && spawn new food && increase score
-            if self.player.head.position == self.food.position {
+            if self.player.body[0] == self.food.position {
                 // if maximum size, you win !
-                if self.player.tail.len() as f32 + 1.0 == GRID_SIZE_X * GRID_SIZE_Y {
+                if self.player.body.len() as f32 == GRID_SIZE_X * GRID_SIZE_Y {
                     return Ok(self.new_game(ctx));
                 }
 
-                let mut snake_position = Vec::new();
-
-                snake_position.push(self.player.head.position);
-
-                for tail_segment in &self.player.tail {
-                    snake_position.push(tail_segment.position);
-                }
-
-                self.food.position = Food::food_eaten(snake_position);
-                self.player.add_to_tail();
-                self.score.add_to_score();
+                self.food.new_position(&self.player);
+                self.score.change_score(10);
+                self.player.grow();
             }
         }
 
@@ -104,39 +98,27 @@ impl EventHandler for MainState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, Color::BLACK);
 
-        //  draw head
-        graphics::draw(
-            ctx,
-            &self.player.mesh,
-            DrawParam::default().dest(self.player.head.position),
-        )?;
+        //  render snake
+        self.player.render(ctx)?;
 
-        //  draw tail
-        for tail_segment in &self.player.tail {
-            graphics::draw(
-                ctx,
-                &self.player.mesh,
-                DrawParam::default().dest(tail_segment.position),
-            )?;
-        }
-
-        //  draw food
-        graphics::draw(
-            ctx,
-            &self.food.mesh,
-            DrawParam::default().dest(self.food.position),
-        )?;
+        //  render food
+        self.food.render(ctx)?;
 
         //  draw score text
-        graphics::draw(
-            ctx,
-            &self.score.text,
-            DrawParam::default().dest(Point2 {
-                x: FONT_POSITION_X,
-                y: FONT_POSITION_Y,
-            }),
-        )?;
+        self.score.render(ctx)?;
 
         graphics::present(ctx)
     }
+}
+
+fn collision_check(player: &Player) -> bool {
+    if player.body.len() == 1 {
+        return false;
+    };
+
+    if player.body[1..].contains(&player.body[0]) {
+        return true;
+    }
+
+    false
 }
